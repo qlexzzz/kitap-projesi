@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kitap Okuma & Quiz</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+</head>
+<body class="dark-mode">
+
+    <section id="login-screen" class="screen">
+        <div class="login-card">
+            <h1 id="auth-title">Giriş Yap</h1>
+            <div id="auth-inputs">
+                <div id="register-fields" class="hidden">
+                    <input type="text" id="user-name" placeholder="Adınız">
+                    <input type="text" id="user-surname" placeholder="Soyadınız">
+                    <select id="user-grade" class="minimal-input">
+                        <option value="">Sınıf Seçin</option>
+                        <option value="5">5. Sınıf</option>
+                        <option value="6">6. Sınıf</option>
+                        <option value="7">7. Sınıf</option>
+                        <option value="8">8. Sınıf</option>
+                        <option value="9">9. Sınıf</option>
+                        <option value="10">10. Sınıf</option>
+                        <option value="11">11. Sınıf</option>
+                        <option value="12">12. Sınıf</option>
+                    </select>
+                </div>
+                <input type="email" id="auth-email" placeholder="E-posta">
+                <input type="password" id="auth-password" placeholder="Şifre">
+                <button id="main-auth-button">Giriş Yap</button>
+                <div class="auth-toggle-container">
+                    <p id="toggle-auth-text">Hesabınız yok mu?</p>
+                    <button id="toggle-auth-btn" class="secondary-button">Kayıt Olun</button>
+                </div>
+            </div>
+            <p id="auth-message" class="error-message"></p>
+        </div>
+    </section>
+
+    <section id="app-screen" class="screen hidden">
+        <header class="app-header">
+            <h1>Kitap Panelim</h1>
+            <div class="header-controls">
+                <button id="leaderboard-btn">Sıralama</button>
+                <button id="profile-nav-btn">Profilim</button>
+                <button id="library-button">Kitaplık</button>
+                <button id="sign-out-button">Çıkış</button>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <aside id="sidebar">
+                <div class="sidebar-section">
+                    <h3>Haftalık Seri 🔥</h3>
+                    <div id="weekly-progress" class="weekly-dots"></div>
+                    <small id="streak-info" style="color:#888; font-size:11px;">Yükleniyor...</small>
+                </div>
+
+                <hr style="margin: 15px 0; border: 0; border-top: 1px solid #444;">
+
+                <h3>Günlük Görevler ⚔️</h3>
+                <div id="sidebar-quests">
+                    <div class="quest-item" id="q-login">
+                        <span class="quest-status">❌</span> <span class="quest-text">Giriş Yap</span>
+                    </div>
+                    <div class="quest-item" id="q-daily-1">
+                        <span class="quest-status">❌</span> <span class="quest-text">Görev 1</span>
+                    </div>
+                    <div class="quest-item" id="q-daily-2">
+                        <span class="quest-status">❌</span> <span class="quest-text">Görev 2</span>
+                    </div>
+                </div>
+                
+                <hr style="margin: 15px 0; border: 0; border-top: 1px solid #444;">
+                
+                <h3>Okuma Ayarları</h3>
+                <div class="setting-group">
+                    <label>Yazı Boyutu:</label>
+                    <input type="range" id="font-size-slider" min="14" max="26" value="18">
+                </div>
+                
+                <hr style="margin: 15px 0; border: 0; border-top: 1px solid #444;">
+                
+                <h3>Son Aktivite</h3>
+                <div id="stats-area"></div>
+            </aside>
+
+            <section id="content-area">
+                <div id="library-module" class="content-module">
+                    <div id="book-list" class="grid-container"></div>
+                </div>
+
+                <div id="leaderboard-module" class="content-module hidden">
+                    <div class="leaderboard-card">
+                        <h2>🏆 En İyi Okurlar</h2>
+                        <p>Tüm zamanların en çok test çözenleri</p>
+                        <div id="leaderboard-list"></div>
+                    </div>
+                </div>
+
+                <div id="reading-module" class="content-module hidden">
+                    <h2 id="reading-book-title">Kitap Başlığı</h2>
+                    <div id="timer-display">
+                        <span id="timer">05:00</span>
+                    </div>
+                    
+                    <button id="start-button" class="primary-button">Okumayı Başlat</button>
+
+                    <div id="book-content" class="book-text-area"></div>
+                    <button id="finish-early-button" class="secondary-button hidden">Okumayı Bitir</button>
+                </div>
+
+<div id="profile-module" class="content-module hidden">
+    <div class="profile-container">
+        
+        <div class="profile-header-card">
+            <div class="profile-avatar">👤</div>
+            <h2 id="profile-full-name">Yükleniyor...</h2>
+            <p id="profile-grade-display"></p>
+        </div>
+
+        <div class="mobile-stats-container">
+            
+            <div class="streak-card">
+                <span class="streak-icon">🔥</span>
+                <div class="streak-details">
+                    <span id="streak-info">0 Gün</span>
+                    <small>Okuma Serisi</small>
+                </div>
+            </div>
+
+
+            <div class="history-section">
+                <h3>Son Okumalarım</h3>
+                <div id="stats-area">
+                    </div>
+            </div>
+
+        </div> </div>             
+        <div class="stats-summary-grid">
+                <div class="summary-box">
+                    <span class="summary-label">Toplam Test</span>
+                    <span id="profile-total-tests" class="summary-value">0</span>
+                </div>
+                <div class="summary-box">
+                    <span class="summary-label">Başarı Ort.</span>
+                    <span id="profile-avg-score" class="summary-value">%0</span>
+                </div>
+            </div> </div>
+
+                <div id="quiz-module" class="content-module hidden">
+                    <div id="quiz-area"></div>
+                    <button id="submit-quiz" disabled>Sonucu Gönder</button>
+                </div>
+
+                <div id="result-module" class="content-module hidden">
+                    <div class="result-card">
+                        <h2>Tebrikler!</h2>
+                        <h3 id="final-score">Puan: 0 / 0</h3>
+                        <p>Hız: <span id="wpm-display">0</span> WPM</p>
+                        <button id="new-book-button" class="main-button">Yeni Kitap</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </section>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
