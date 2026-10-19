@@ -10,7 +10,7 @@ export const userDoc = {
     data: { totalTests: 0, totalCorrect: 0, books: {}, favorites: {} },
 
     async load(uid) {
-        const snap = await db().collection('users').doc(uid).get();
+        const snap = await db.collection('users').doc(uid).get();
         this.data = snap.exists ? (snap.data() || {}) : {};
         if (!this.data.books) this.data.books = {};
         if (!this.data.favorites) this.data.favorites = {};
@@ -21,7 +21,7 @@ export const userDoc = {
 
     /** İlerleme alanlarını nokta-notasyonu ile birleştirir (var olan alanları silmez). */
     async save(uid, bookId, patch) {
-        const ref = db().collection('users').doc(uid);
+        const ref = db.collection('users').doc(uid);
         const payload = { [`books.${bookId}`]: { ...(this.data.books?.[bookId] || {}), ...patch } };
         if (bookId) {
             payload.lastBookId = bookId;
@@ -34,7 +34,7 @@ export const userDoc = {
 
     /** Test sonucu sayacını artırır (leaderboard bu değere göre sıralar). */
     async addResult(uid, correct, total) {
-        await db().collection('users').doc(uid).set({
+        await db.collection('users').doc(uid).set({
             totalTests: increment(1),
             totalCorrect: increment(correct),
             lastCorrect: correct,
@@ -70,7 +70,7 @@ export const userDoc = {
 
     async toggleFavorite(uid, bookId) {
         const next = !this.isFavorite(bookId);
-        await db().collection('users').doc(uid)
+        await db.collection('users').doc(uid)
             .set({ [`favorites.${bookId}`]: next }, { merge: true });
         this.data.favorites ??= {};
         this.data.favorites[bookId] = next;

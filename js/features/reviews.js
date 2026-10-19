@@ -15,7 +15,7 @@ export function setCurrentUid(uid) { currentUid = uid; }
 
 /** Kitabın tüm yorumlarını, ortalamasını ve dağılımını getirir. */
 export async function loadBookReviews(bookId) {
-    const snap = await db().collection(COLLECTION).where('bookId', '==', bookId).get();
+    const snap = await db.collection(COLLECTION).where('bookId', '==', bookId).get();
     const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
     const dist = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
@@ -41,7 +41,7 @@ export async function saveReview({ uid, profile, bookId, bookTitle, rating, text
 
     const body = String(text || '').trim().slice(0, 500);
 
-    await db().collection(COLLECTION).doc(`${bookId}__${uid}`).set({
+    await db.collection(COLLECTION).doc(`${bookId}__${uid}`).set({
         bookId,
         bookTitle: bookTitle || '',
         userId: uid,
@@ -54,12 +54,12 @@ export async function saveReview({ uid, profile, bookId, bookTitle, rating, text
 }
 
 export async function deleteReview(reviewId) {
-    await db().collection(COLLECTION).doc(reviewId).delete();
+    await db.collection(COLLECTION).doc(reviewId).delete();
 }
 
 /** Kullanıcının tüm yorumları (profil ekranı). */
 export async function loadMyReviews(uid) {
-    const snap = await db().collection(COLLECTION).where('userId', '==', uid).get();
+    const snap = await db.collection(COLLECTION).where('userId', '==', uid).get();
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 

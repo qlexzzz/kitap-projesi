@@ -53,14 +53,26 @@ function wireModules() {
 
 /* ─────────── oturum sonrası ─────────── */
 
+/** Kitaplığı yerel veriden anında çizer ve gösterir; ağ gerektirmez. */
+function showLibraryNow() {
+    renderLibrary();
+    showModule('library-module', RENDERERS);
+}
+
 async function onSignedIn() {
     setCurrentUid(state.user.uid);
     applyProfile();
     initDailyQuests();
 
+    // Profil geldi: favoriler ve ilerleme rozetleri tazelensin.
+    renderLibrary();
+
+    // Ağ verileri geldikçe kitaplığı yeniden çiz. Bu çağrıların hepsi kendi
+    // hatasını yutar; biri düşse bile ekran boş kalmaz çünkü kitap listesi
+    // zaten yerel `data/books.js` verisinden çizildi.
     await Promise.all([loadAllTexts(), refreshRatings()]);
-    await Promise.all([renderLibrary(), refreshQuests(), refreshStats()]);
-    showModule('library-module', RENDERERS);
+    renderLibrary();
+    await Promise.all([refreshQuests(), refreshStats()]);
 }
 
 /* ─────────── olay bağlama ─────────── */
@@ -169,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
         $('#book-content').style.fontSize = savedSize + 'px';
     }
 
-    watchAuth(onSignedIn);
+    watchAuth(onSignedIn, showLibraryNow);
 
     // kitap metinleri girişten önce de hazır olsun
     loadAllTexts();

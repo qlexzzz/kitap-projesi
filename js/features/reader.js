@@ -13,6 +13,7 @@ export async function openReader(book) {
     state.elapsedMinutes = 0;
     state.pages = [];
     state.pageIndex = 0;
+    finishing = false;
     stopTimer();
 
     // Metin henüz inmemişse burada bekle: "metin yüklenemedi" ekranı çıkmasın.
@@ -51,6 +52,9 @@ const SPREAD_MIN_WIDTH = 1100;
 
 /* Aynı anda birden çok bölme başlarsa yalnızca sonuncusu yazsın. */
 let buildToken = 0;
+
+/* "Okumayı bitir" iki kez çalışmasın (çift tıklama ya da sayaç tekrarı). */
+let finishing = false;
 
 function isSpread() {
     return window.innerWidth >= SPREAD_MIN_WIDTH;
@@ -223,6 +227,7 @@ export async function startSession() {
     const book = state.book;
     if (!book) return;
 
+    finishing = false;
     $('#reading-prep').classList.add('hidden');
     $('#book-content').classList.add('is-open');
     $('#finish-early-button').classList.remove('hidden');
@@ -260,21 +265,34 @@ let onQuiz = null;
 export function setQuizStarter(fn) { onQuiz = fn; }
 
 export async function finishReading() {
+    if (finishing) return;          // çift tıklama / sayaç tekrarı
+    finishing = true;
+
     stopTimer();
-    if (!state.book) return;
+    const book = state.book;
+    if (!book) { finishing = false; return; }
 
     // Gerçek geçen süre; "bitir" butonuyla saniyeler içinde çıkılmasın
     // diye taban değer uygulanır.
-    const real = (Date.now() - state.sessionStart) / 60000;
+    const real = (Date.now() - (state.sessionStart || Date.now())) / 60000;
     state.elapsedMinutes = Math.max(MIN_CREDITED_MINUTES, real);
 
-    await userDoc.save(state.user.uid, state.book.id, {
-        phase: PHASE.QUIZ,
-        page: state.pageIndex,
-        elapsed: Number(state.elapsedMinutes.toFixed(2)),
-    });
+    // Kayıt başarısız olsa bile test ekranı açılmalı. Firestore yazma izni
+    // yoksa veya bağlantı düşükse buradaki hata yutuluyordu ve düğme
+    // "çalışmıyor" gibi görünüyordu (test ekranı hiç açılmıyordu).
+    if (state.user) {
+        try {
+            await userDoc.save(state.user.uid, book.id, {
+                phase: PHASE.QUIZ,
+                page: state.pageIndex,
+                elapsed: Number(state.elapsedMinutes.toFixed(2)),
+            });
+        } catch (err) {
+            console.error('Okuma ilerlemesi kaydedilemedi:', err);
+        }
+    }
 
-    onQuiz?.(state.book);
+    onQuiz?.(book);
 }
 
 export { repaginate, setFocus };

@@ -93,6 +93,34 @@ içeriğini yapıştır ve **Yayınla**'ya bas.
 **Gerekli değil:** composite index. Tüm sorgular tek alanlıdır
 (`where('bookId')`, `where('userId')`, `orderBy('totalTests')`).
 
+## GitHub'a koymak
+
+Depodaki hiçbir dosya gizli anahtar içermiyor, olduğu gibi yüklenebilir.
+
+`js/core/firebase.js` içindeki `apiKey` **gizli değil** — Firebase web
+uygulamalarında bu bilgi zaten tarayıcıya iner. Google da bunu böyle
+belgeliyor. Kimliği doğrulayan şey anahtar değil, şu iki ayardır:
+
+1. **Firestore kuralları** — asıl koruma bu. Kural yayınlanmazsa veritabanı
+   açık kalır ve bu, deponun gizli ya da açık olmasından bağımsız bir sorundur.
+   Yukarıdaki `firebase deploy --only firestore:rules` adımını atlama.
+2. **API anahtarı kısıtları** — Google Cloud Console → Kimlik Bilgileri →
+   tarayıcı anahtarı. Kendi adreslerini ekle
+   (`http://localhost:8777/*`, yayındaki alan adı).
+
+Depoya **girmemesi** gerekenler (`.gitignore`'da zaten var): `.firebase/`,
+`firebase-debug.log`, `*.log`, `node_modules/`. Kişisel anahtar dosyası
+(`serviceAccountKey.json`, `*firebase-adminsdk*.json`) bu projede hiç yok;
+ileride eklenirse asla yüklemeyin.
+
+GitHub Pages'te yayınlarsan iki ayarı daha güncelle:
+
+- **Kimlik Doğrulama → Ayarlar → Yetkili alan adları**: `kullanici-adin.github.io`
+- **API anahtarı HTTP yönlendiren kısıtı**: `https://kullanici-adin.github.io/*`
+
+Bunlar eksikse giriş `auth/unauthorized-domain` veya
+`API_KEY_HTTP_REFERRER_BLOCKED` hatasıyla düşer.
+
 ## Veri modeli
 
 ```
@@ -100,9 +128,9 @@ users/{uid}
     firstName, lastName, grade, createdAt
     totalTests, totalCorrect            ← sıralama bu sayaçlardan okur
     lastBookId, lastReadAt
-    books/{bookId}: { phase, ratio, elapsed, updatedAt }
+    books/{bookId}: { phase, page, elapsed, updatedAt }
         phase ∈ new | reading | quiz | done
-        ratio = metindeki scroll oranı (0-1)
+        page = kalınan sayfa indeksi (0 tabanlı)
 
 readingResults/{autoId}                ← yalnızca sahibi okuyabilir
     userId, bookId, bookTitle, score, total, wpm, timeSpent, date

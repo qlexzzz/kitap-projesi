@@ -120,9 +120,17 @@ export function toggleAuthMode() {
     setMessage('');
 }
 
-/** Oturum durumu değişince çağrılır; onSignedIn giriş sonrası işleri yapar. */
-export function watchAuth(onSignedIn) {
+/**
+ * Oturum durumu değişince çağrılır.
+ *
+ * `onReady` ağ beklemeden, ekran açılır açılmaz çalışır (kitaplık yerel kitap
+ * verisinden çizilir). `onSignedIn` ise profil yüklendikten sonra ağ işlerini
+ * yapar. İkisi ayrıldı çünkü Firestore yavaş olduğunda ya da kullanıcı
+ * dokümanı okunamadığında ekran boş kalıyordu.
+ */
+export function watchAuth(onSignedIn, onReady) {
     auth.onAuthStateChanged(async user => {
+        const previousUid = state.user?.uid || null;
         state.user = user;
 
         if (!user) {
@@ -133,6 +141,10 @@ export function watchAuth(onSignedIn) {
 
         $('#auth-screen').classList.add('hidden');
         $('#app-screen').classList.remove('hidden');
+
+        // Aynı kullanıcının jeton yenilemesinde tekrar çalıştırma; yoksa
+        // okuma/test ekranındayken kullanıcıyı kitaplığa geri atardı.
+        if (previousUid !== user.uid) onReady?.();
 
         try {
             state.profile = await userDoc.load(user.uid);
