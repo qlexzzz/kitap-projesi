@@ -1,25 +1,56 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Kitap Okuma & Quiz</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kitap Odası</title>
+<meta name="description" content="Okuma hızını geliştir, testlerle pekiştir, okuduğun kitaplar hakkında düşüncelerini yaz.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<script>
+    /* Tema tercihi CSS yüklenmeden önce uygulanır, böylece sayfa titremez. */
+    try {
+        var p = JSON.parse(localStorage.getItem('kitap:prefs')) || {};
+        var r = document.documentElement;
+        if (p.accent) r.dataset.accent = p.accent;
+        if (p.mode) r.dataset.mode = p.mode;
+        if (p.readFont) r.dataset.readfont = p.readFont;
+    } catch (e) {}
+</script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 </head>
-<body class="dark-mode">
+<body>
 
-    <section id="login-screen" class="screen">
-        <div class="login-card">
-            <h1 id="auth-title">Giriş Yap</h1>
-            <div id="auth-inputs">
-                <div id="register-fields" class="hidden">
-                    <input type="text" id="user-name" placeholder="Adınız">
-                    <input type="text" id="user-surname" placeholder="Soyadınız">
-                    <select id="user-grade" class="minimal-input">
-                        <option value="">Sınıf Seçin</option>
+<div id="toast-stack" class="toast-stack" aria-live="polite"></div>
+
+<!-- ══════════════ GİRİŞ ══════════════ -->
+<div id="auth-screen">
+    <div class="auth-card">
+        <div class="auth-head">
+            <h1>Kitap Odası</h1>
+            <p>Oku · Anla · Paylaş</p>
+        </div>
+
+        <form id="auth-form" autocomplete="on">
+            <div id="register-fields" class="register-fields hidden">
+                <div class="field-row">
+                    <label class="field">
+                        <span class="label">Ad</span>
+                        <input type="text" id="user-name" placeholder="Adın" maxlength="30" required>
+                    </label>
+                    <label class="field">
+                        <span class="label">Soyad</span>
+                        <input type="text" id="user-surname" placeholder="Soyadın" maxlength="30" required>
+                    </label>
+                </div>
+                <label class="field">
+                    <span class="label">Sınıf</span>
+                    <select id="user-grade">
+                        <option value="">Sınıfını seç</option>
                         <option value="5">5. Sınıf</option>
                         <option value="6">6. Sınıf</option>
                         <option value="7">7. Sınıf</option>
@@ -29,147 +60,344 @@
                         <option value="11">11. Sınıf</option>
                         <option value="12">12. Sınıf</option>
                     </select>
-                </div>
-                <input type="email" id="auth-email" placeholder="E-posta">
-                <input type="password" id="auth-password" placeholder="Şifre">
-                <button id="main-auth-button">Giriş Yap</button>
-                <div class="auth-toggle-container">
-                    <p id="toggle-auth-text">Hesabınız yok mu?</p>
-                    <button id="toggle-auth-btn" class="secondary-button">Kayıt Olun</button>
-                </div>
+                </label>
             </div>
-            <p id="auth-message" class="error-message"></p>
+
+            <label class="field">
+                <span class="label">E-posta</span>
+                <input type="email" id="auth-email" placeholder="ornek@okul.com" required>
+            </label>
+            <label class="field">
+                <span class="label">Şifre</span>
+                <input type="password" id="auth-password" placeholder="En az 6 karakter" minlength="6" required>
+            </label>
+
+            <p id="auth-message" class="auth-message" role="alert"></p>
+
+            <button type="submit" id="main-auth-button" class="btn btn-primary btn-block">Giriş Yap</button>
+        </form>
+
+        <div id="diagnostic" class="diagnostic hidden"></div>
+
+        <div class="auth-switch">
+            <span id="toggle-auth-text">Hesabın yok mu?</span>
+            <button type="button" id="toggle-auth-btn" class="btn btn-quiet btn-sm">Kayıt Ol</button>
         </div>
-    </section>
+    </div>
+</div>
 
-    <section id="app-screen" class="screen hidden">
-        <header class="app-header">
-            <h1>Kitap Panelim</h1>
-            <div class="header-controls">
-                <button id="leaderboard-btn">Sıralama</button>
-                <button id="profile-nav-btn">Profilim</button>
-                <button id="library-button">Kitaplık</button>
-                <button id="sign-out-button">Çıkış</button>
-            </div>
-        </header>
-
-        <main class="app-main">
-            <aside id="sidebar">
-                <div class="sidebar-section">
-                    <h3>Haftalık Seri 🔥</h3>
-                    <div id="weekly-progress" class="weekly-dots"></div>
-                    <small id="streak-info" style="color:#888; font-size:11px;">Yükleniyor...</small>
-                </div>
-
-                <hr style="margin: 15px 0; border: 0; border-top: 1px solid #444;">
-
-                <h3>Günlük Görevler ⚔️</h3>
-                <div id="sidebar-quests">
-                    <div class="quest-item" id="q-login">
-                        <span class="quest-status">❌</span> <span class="quest-text">Giriş Yap</span>
-                    </div>
-                    <div class="quest-item" id="q-daily-1">
-                        <span class="quest-status">❌</span> <span class="quest-text">Görev 1</span>
-                    </div>
-                    <div class="quest-item" id="q-daily-2">
-                        <span class="quest-status">❌</span> <span class="quest-text">Görev 2</span>
-                    </div>
-                </div>
-                
-                <hr style="margin: 15px 0; border: 0; border-top: 1px solid #444;">
-                
-                <h3>Okuma Ayarları</h3>
-                <div class="setting-group">
-                    <label>Yazı Boyutu:</label>
-                    <input type="range" id="font-size-slider" min="14" max="26" value="18">
-                </div>
-                
-                <hr style="margin: 15px 0; border: 0; border-top: 1px solid #444;">
-                
-                <h3>Son Aktivite</h3>
-                <div id="stats-area"></div>
-            </aside>
-
-            <section id="content-area">
-                <div id="library-module" class="content-module">
-                    <div id="book-list" class="grid-container"></div>
-                </div>
-
-                <div id="leaderboard-module" class="content-module hidden">
-                    <div class="leaderboard-card">
-                        <h2>🏆 En İyi Okurlar</h2>
-                        <p>Tüm zamanların en çok test çözenleri</p>
-                        <div id="leaderboard-list"></div>
-                    </div>
-                </div>
-
-                <div id="reading-module" class="content-module hidden">
-                    <h2 id="reading-book-title">Kitap Başlığı</h2>
-                    <div id="timer-display">
-                        <span id="timer">05:00</span>
-                    </div>
-                    
-                    <button id="start-button" class="primary-button">Okumayı Başlat</button>
-
-                    <div id="book-content" class="book-text-area"></div>
-                    <button id="finish-early-button" class="secondary-button hidden">Okumayı Bitir</button>
-                </div>
-
-<div id="profile-module" class="content-module hidden">
-    <div class="profile-container">
-        
-        <div class="profile-header-card">
-            <div class="profile-avatar">👤</div>
-            <h2 id="profile-full-name">Yükleniyor...</h2>
-            <p id="profile-grade-display"></p>
+<!-- ══════════════ UYGULAMA ══════════════ -->
+<div id="app-screen" class="hidden">
+    <header class="topbar">
+        <div class="brand">
+            <h1>Kitap Odası</h1>
+            <span id="brand-greeting">Oku · Anla · Paylaş</span>
         </div>
+        <nav class="topbar-nav" id="topbar-nav">
+            <button class="nav-btn is-active" data-nav="library-module">Kitaplık</button>
+            <button class="nav-btn" data-nav="leaderboard-module">Sıralama</button>
+            <button class="nav-btn" data-nav="profile-module">Profil</button>
+            <button class="nav-btn nav-out" id="sign-out-button">Çıkış</button>
+        </nav>
+    </header>
 
-        <div class="mobile-stats-container">
-            
-            <div class="streak-card">
-                <span class="streak-icon">🔥</span>
-                <div class="streak-details">
-                    <span id="streak-info">0 Gün</span>
-                    <small>Okuma Serisi</small>
-                </div>
-            </div>
+    <main class="shell">
+        <aside id="side-panel" class="side-panel">
+            <section class="side-block">
+                <h2 class="label">Okuma serisi</h2>
+                <div class="streak-figure"><span id="sidebar-streak">0</span><small>gün</small></div>
+                <div id="weekly-dots" class="weekly-dots"></div>
+                <p class="side-note" id="streak-note">Henüz kayıt yok.</p>
+            </section>
 
+            <section class="side-block">
+                <h2 class="label">Günlük görevler</h2>
+                <ul class="quest-list">
+                    <li class="quest-item" id="q-login"><span class="quest-mark">·</span><span class="quest-text">Giriş yap</span></li>
+                    <li class="quest-item" id="q-daily-1"><span class="quest-mark">·</span><span class="quest-text">Görev 1</span></li>
+                    <li class="quest-item" id="q-daily-2"><span class="quest-mark">·</span><span class="quest-text">Görev 2</span></li>
+                </ul>
+            </section>
 
-            <div class="history-section">
-                <h3>Son Okumalarım</h3>
-                <div id="stats-area">
+            <section class="side-block">
+                <h2 class="label">Rozetler</h2>
+                <ul id="badges-container" class="badge-list"></ul>
+            </section>
+        </aside>
+
+        <div class="content-area">
+
+            <!-- ───── KİTAPLIK ───── -->
+            <section class="module hidden" data-module="library-module">
+                <div class="module-head">
+                    <div>
+                        <p class="label">Kitaplık</p>
+                        <h2>Ne okumak istersin?</h2>
                     </div>
-            </div>
-
-        </div> </div>             
-        <div class="stats-summary-grid">
-                <div class="summary-box">
-                    <span class="summary-label">Toplam Test</span>
-                    <span id="profile-total-tests" class="summary-value">0</span>
-                </div>
-                <div class="summary-box">
-                    <span class="summary-label">Başarı Ort.</span>
-                    <span id="profile-avg-score" class="summary-value">%0</span>
-                </div>
-            </div> </div>
-
-                <div id="quiz-module" class="content-module hidden">
-                    <div id="quiz-area"></div>
-                    <button id="submit-quiz" disabled>Sonucu Gönder</button>
                 </div>
 
-                <div id="result-module" class="content-module hidden">
-                    <div class="result-card">
-                        <h2>Tebrikler!</h2>
-                        <h3 id="final-score">Puan: 0 / 0</h3>
-                        <p>Hız: <span id="wpm-display">0</span> WPM</p>
-                        <button id="new-book-button" class="main-button">Yeni Kitap</button>
+                <div id="resume-banner" class="resume-row hidden">
+                    <div id="resume-cover"></div>
+                    <div class="cover-text">
+                        <p class="label" id="resume-label">Kaldığın yerden devam et</p>
+                        <h3 id="resume-title">—</h3>
+                        <p class="side-note" id="resume-meta">—</p>
+                    </div>
+                    <button class="btn btn-primary" id="resume-btn">Devam et</button>
+                </div>
+
+                <div class="filter-bar">
+                    <button class="btn btn-quiet btn-sm is-active" data-filter="all">Tümü</button>
+                    <button class="btn btn-quiet btn-sm" data-filter="fav">Favoriler</button>
+                    <button class="btn btn-quiet btn-sm" data-filter="todo">Bitirilmemiş</button>
+                </div>
+
+                <div id="book-list" class="book-grid"></div>
+            </section>
+
+            <!-- ───── KİTAP DETAY ───── -->
+            <section class="module hidden" data-module="book-detail-module">
+                <button class="back-link" data-back="library-module">← Kitaplığa dön</button>
+
+                <div class="detail">
+                    <div id="detail-cover"></div>
+                    <div class="detail-info">
+                        <p class="label" id="detail-era">—</p>
+                        <h2 id="detail-title">Kitap</h2>
+                        <p class="detail-author" id="detail-author">—</p>
+                        <p class="detail-summary" id="detail-summary">—</p>
+                        <div class="detail-rating">
+                            <div id="detail-stars" class="stars" data-readonly="true"></div>
+                            <span class="rating-value" id="detail-rating-value">0.0</span>
+                            <span class="rating-count" id="detail-rating-count"></span>
+                        </div>
+                        <ul class="tag-list" id="detail-tags"></ul>
+                        <div class="detail-actions">
+                            <button class="btn btn-primary" id="detail-start-btn">Okumayı başlat</button>
+                            <button class="btn btn-quiet" id="detail-write-btn">Yorumunu yaz</button>
+                            <button class="btn btn-quiet fav-btn" id="detail-fav-btn" aria-pressed="false" title="Favorilere ekle">★ Favori</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="divider"><span class="label">Yorumlar</span></div>
+
+                <div class="review-layout">
+                    <aside class="review-aside">
+                        <div>
+                            <div class="review-score"><span id="summary-avg">0.0</span><small id="summary-count">değerlendirme yok</small></div>
+                            <div id="summary-stars" class="stars" data-readonly="true"></div>
+                        </div>
+                        <div id="summary-bars" class="dist-list"></div>
+                    </aside>
+
+                    <div class="review-main">
+                        <form class="review-form" id="review-form">
+                            <div class="review-form-head">
+                                <div class="avatar" id="review-avatar">?</div>
+                                <div>
+                                    <strong id="review-identity-name">—</strong>
+                                    <small id="review-identity-meta"></small>
+                                </div>
+                            </div>
+
+                            <div class="review-form-rating">
+                                <span class="label">Kitabı puanla</span>
+                                <div id="review-stars" class="stars stars-lg" role="radiogroup" aria-label="Kitap puanı"></div>
+                                <span class="rating-hint" id="review-rating-hint">Puan seç</span>
+                            </div>
+
+                            <label class="field">
+                                <span class="label">Düşüncelerin <small>(isteğe bağlı)</small></span>
+                                <textarea id="review-text" rows="4" maxlength="500"
+                                    placeholder="Bu kitapta seni en çok ne etkiledi?"></textarea>
+                                <span class="char-count"><span id="review-chars">0</span>/500</span>
+                            </label>
+
+                            <div class="review-form-actions">
+                                <button type="button" class="btn btn-quiet btn-sm hidden" id="review-cancel-btn">Vazgeç</button>
+                                <button type="submit" class="btn btn-primary" id="review-submit">Yorumu gönder</button>
+                            </div>
+                        </form>
+
+                        <div class="review-toolbar">
+                            <h3>Okurların ne dedi?</h3>
+                            <select id="review-sort" class="sort-select" aria-label="Yorum sıralaması">
+                                <option value="new">En yeni</option>
+                                <option value="high">En yüksek puan</option>
+                                <option value="low">En düşük puan</option>
+                            </select>
+                        </div>
+
+                        <div id="review-list" class="review-list"></div>
                     </div>
                 </div>
             </section>
-        </main>
-    </section>
 
-    <script type="module" src="script.js"></script>
+            <!-- ───── OKUMA ───── -->
+            <section class="module hidden" data-module="reading-module">
+                <button type="button" class="btn btn-quiet focus-exit" id="focus-exit">Odaktan çık</button>
+
+                <div class="reading-head">
+                    <button class="back-link" data-back="book-detail-module">← Kitaba dön</button>
+                    <div class="reading-titles">
+                        <h2 id="reading-book-title">Kitap</h2>
+                        <p class="reading-author" id="reading-author">—</p>
+                    </div>
+                    <div class="reading-controls">
+                        <div class="timer-chip">
+                            <span class="label">Kalan süre</span>
+                            <span id="timer" class="timer-value mono-num">05:00</span>
+                            <span class="timer-bar"><span class="timer-bar-fill" id="timer-bar-fill"></span></span>
+                        </div>
+                        <div class="ctrl-group">
+                            <span class="label">Yazı boyutu</span>
+                            <input type="range" id="font-size-slider" min="15" max="28" value="19" aria-label="Yazı boyutu">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="quest-strip" class="quest-strip"></div>
+
+                <div id="reading-prep" class="reading-prep">
+                    <h3>Okumaya hazır mısın?</h3>
+                    <p>Metin “Okumayı başlat” dediğinde açılacak ve süre başlayacak.</p>
+                    <div class="reading-facts" id="reading-facts"></div>
+                    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+                        <button class="btn btn-primary" id="start-button">Okumayı başlat</button>
+                        <button class="btn btn-quiet" id="focus-button" aria-pressed="false">Odak modu</button>
+                    </div>
+                </div>
+
+                <div id="book-content" class="reader" data-spread="single">
+                    <div class="book">
+                        <div class="book-leaf book-leaf-left">
+                            <p class="running-head" id="running-head-left"></p>
+                            <article class="page" id="reading-page"></article>
+                            <div class="folio" id="folio-left"></div>
+                        </div>
+                        <div class="book-leaf book-leaf-right">
+                            <p class="running-head" id="running-head-right"></p>
+                            <article class="page" id="reading-page-right"></article>
+                            <div class="folio" id="folio-right"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="reading-foot">
+                    <button id="page-prev" class="btn btn-quiet" disabled>← Önceki</button>
+                    <div class="pager">
+                        <div class="pager-bar"><div class="pager-fill" id="pager-fill"></div></div>
+                        <span class="pager-label" id="pager-label">Sayfa 1 / 1</span>
+                    </div>
+                    <button id="page-next" class="btn btn-quiet">Sonraki →</button>
+                </div>
+
+                <div class="reading-foot-secondary">
+                    <p id="reading-hint" class="reading-hint"></p>
+                    <div style="display:flex;gap:8px">
+                        <button class="btn btn-quiet" id="focus-button-2" aria-pressed="false">Odak modu</button>
+                        <button id="finish-early-button" class="btn btn-quiet hidden">Okumayı bitir</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ───── TEST ───── -->
+            <section class="module hidden" data-module="quiz-module">
+                <div class="quiz-head">
+                    <button class="back-link" data-back="reading-module">← Metne dön</button>
+                    <h2>Okuduğunu anladın mı?</h2>
+                    <p class="quiz-sub">Tüm soruları cevapla, sonra gönder.</p>
+                </div>
+                <div id="quiz-area"></div>
+                <button id="submit-quiz" class="btn btn-primary btn-lg btn-block" disabled>Sonucu gönder</button>
+            </section>
+
+            <!-- ───── SONUÇ ───── -->
+            <section class="module hidden" data-module="result-module">
+                <div id="result-body" class="result"></div>
+            </section>
+
+            <!-- ───── SIRALAMA ───── -->
+            <section class="module hidden" data-module="leaderboard-module">
+                <div class="module-head">
+                    <div>
+                        <p class="label">Sıralama</p>
+                        <h2>En iyi okurlar</h2>
+                    </div>
+                    <p class="rating-count">Çözdüğü test sayısı</p>
+                </div>
+                <ol id="leaderboard-list" class="rank-list"></ol>
+            </section>
+
+            <!-- ───── PROFİL ───── -->
+            <section class="module hidden" data-module="profile-module">
+                <div class="profile-head">
+                    <div class="avatar avatar-lg" id="profile-avatar">?</div>
+                    <div>
+                        <h2 id="profile-full-name">—</h2>
+                        <p class="rating-count" id="profile-grade-display">—</p>
+                    </div>
+                </div>
+
+                <div class="stat-grid">
+                    <div class="stat-tile"><b id="profile-total-tests">0</b><span>Test</span></div>
+                    <div class="stat-tile"><b id="profile-total-correct">0</b><span>Doğru</span></div>
+                    <div class="stat-tile"><b id="profile-avg-score">%0</b><span>Başarı</span></div>
+                    <div class="stat-tile"><b id="profile-streak">0</b><span>Gün</span></div>
+                </div>
+
+                <div class="divider"><span class="label">Son 7 gün</span></div>
+                <div class="chart-head">
+                    <span class="label">Okuma etkinliği</span>
+                    <span class="chart-total" id="chart-total">—</span>
+                </div>
+                <div id="activity-chart" class="chart"></div>
+
+                <div class="divider"><span class="label">Görünüm</span></div>
+                <div class="prefs">
+                    <div class="pref-group">
+                        <span class="label">Renk teması</span>
+                        <div class="swatch-row" id="accent-row"></div>
+                        <p class="pref-note">Yüzeyler, çizgiler ve metin rengi birlikte değişir.</p>
+                    </div>
+
+                    <div class="pref-group">
+                        <span class="label">Mod</span>
+                        <div class="segmented" id="mode-switch">
+                            <button data-mode="dark" aria-pressed="true">Koyu</button>
+                            <button data-mode="light" aria-pressed="false">Açık</button>
+                        </div>
+                    </div>
+
+                    <div class="pref-group">
+                        <span class="label">Okuma yazı tipi</span>
+                        <div class="font-row" id="font-row">
+                            <button class="font-option" data-font="serif" aria-pressed="true">
+                                <b>Kaynak Serif</b><small>Klasik</small>
+                            </button>
+                            <button class="font-option" data-font="literata" aria-pressed="false">
+                                <b>Literata</b><small>Okuma odaklı</small>
+                            </button>
+                            <button class="font-option" data-font="inter" aria-pressed="false">
+                                <b>Inter</b><small>Sans</small>
+                            </button>
+                        </div>
+                        <p class="pref-note">Yalnızca kitap metnini ve kitap başlıklarını etkiler.</p>
+                    </div>
+                </div>
+
+                <div class="divider"><span class="label">Profilimdeki yorumlarım</span></div>
+                <div id="my-reviews" class="review-list"></div>
+
+                <div class="divider"><span class="label">Son okumalarım</span></div>
+                <div id="profile-history" class="history-list"></div>
+            </section>
+
+        </div>
+    </main>
+</div>
+
+<script type="module" src="js/main.js"></script>
 </body>
 </html>
